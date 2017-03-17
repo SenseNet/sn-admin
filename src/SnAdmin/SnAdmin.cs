@@ -512,7 +512,11 @@ namespace SenseNet.Tools.SnAdmin
         {
             var sandboxInfo = new DirectoryInfo(sandboxFolder);
             foreach (FileInfo file in sandboxInfo.GetFiles())
+            {
+                if (file.IsReadOnly)
+                    file.IsReadOnly = false;
                 file.Delete();
+            }
             foreach (DirectoryInfo dir in sandboxInfo.GetDirectories())
                 dir.Delete(true);
         }
