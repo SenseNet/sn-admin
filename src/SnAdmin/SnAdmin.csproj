@@ -81,6 +81,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="PackageHelpInfo.cs" />
     <Compile Include="SnAdminLogger.cs" />
     <Compile Include="SnAdmin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
