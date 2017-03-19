@@ -8,6 +8,19 @@ Upgrade and package executor tool for [Sense/Net ECM](https://github.com/SenseNe
 
 The binaries of this tool are distributed as part of the main Sense/Net ECM release, because SnAdmin is tightly integrated into Sense/Net ECM.
 
+## Usage
+### Executing a package
+`SnAdmin <packagename>`
+
+### Help
+Display usage and available package names and descriptions:
+
+`SnAdmin -help`
+
+Get package description and parameter list:
+
+`SnAdmin <packagename> -help`
+
 For details, examples and extensibility options please visit the following article:
 
 - http://wiki.sensenet.com/SnAdmin
