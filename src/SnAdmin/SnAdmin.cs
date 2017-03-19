@@ -32,8 +32,11 @@ namespace SenseNet.Tools.SnAdmin
             ToolName, " <package> [<target>]", CR,
             CR,
             "Parameters:", CR,
-            "<package>: File contains a package (*.zip or directory).", CR,
-            "<target>: Directory contains web folder of a stopped SenseNet instance.", CR
+            "  <package>: File contains a package (*.zip or directory).", CR,
+            "  <target>: Directory contains web folder of a stopped SenseNet instance.", CR,
+            CR,
+            "Help about an existing package:", CR,
+            ToolName, " <package> -help", CR
         );
         #endregion
 
@@ -59,8 +62,18 @@ namespace SenseNet.Tools.SnAdmin
 
             if (!ParseParameters(args, out packagePath, out targetDirectory/*, out phase*/, out parameters, out logFilePath, out logLevel, out help, out schema, out wait))
                 return -1;
+
             if (!CheckTargetDirectory(targetDirectory))
                 return -1;
+
+            if (help)
+            {
+                if (packagePath == null)
+                    ListPackages();
+                else
+                    PackageHelp(packagePath);
+                return 0;
+            }
 
             if (!CheckPackage(ref packagePath, ref sandboxDirectory))
                 return -1;
@@ -72,6 +85,7 @@ namespace SenseNet.Tools.SnAdmin
 
             return ExecuteGlobal(packagePath, sandboxDirectory, targetDirectory, parameters, help, schema, wait);
         }
+
         private static bool ParseParameters(string[] args, out string packagePath, out string targetDirectory, out string[] parameters, out string logFilePath, out LogLevel logLevel, out bool help, out bool schema, out bool wait)
         {
             packagePath = null;
@@ -123,8 +137,6 @@ namespace SenseNet.Tools.SnAdmin
                 }
             }
 
-            if (targetDirectory == null)
-                targetDirectory = SearchTargetDirectory();
             parameters = prms.ToArray();
 
             return true;
@@ -135,8 +147,12 @@ namespace SenseNet.Tools.SnAdmin
         }
         private static bool CheckTargetDirectory(string targetDirectory)
         {
+            if (targetDirectory == null)
+                targetDirectory = SearchTargetDirectory();
+
             if (Directory.Exists(targetDirectory))
                 return true;
+
             PrintParameterError("Given target directory does not exist: " + targetDirectory);
             return false;
         }
@@ -553,5 +569,119 @@ namespace SenseNet.Tools.SnAdmin
             return zipTarget;
         }
 
+        private static readonly string[] DisabledPackageNames = {"App_Data", "bin", "log", "run", "tools"};
+        private static void ListPackages()
+        {
+            Console.WriteLine(ToolTitle);
+
+            Console.WriteLine("Upgrade and package executor tool for Sense/Net ECM.");
+
+            Console.WriteLine(UsageScreen);
+            Console.WriteLine("Available packages");
+            Console.WriteLine("==================");
+            Console.WriteLine();
+
+            var packageDirectory = DefaultPackageDirectory();
+            PrintPackages(packageDirectory);
+
+            var toolsDirectory = Path.Combine(packageDirectory, "tools");
+            if (!Directory.Exists(toolsDirectory))
+                return;
+
+            Console.WriteLine();
+            Console.WriteLine("Available tools");
+            Console.WriteLine("---------------");
+            Console.WriteLine();
+
+            PrintPackages(toolsDirectory);
+
+            Console.WriteLine();
+        }
+        private static void PrintPackages(string directory)
+        {
+            var unpackedPackages = Directory.GetDirectories(directory)
+                .Select(s => new PackageHelpInfo(s, false))
+                .Where(p => !DisabledPackageNames.Contains(p.Name, StringComparer.OrdinalIgnoreCase))
+                .ToArray();
+            var unpackedPackageNames = unpackedPackages
+                .Select(p => p.Name)
+                .ToArray();
+            var packages = Directory.GetFiles(directory, "*.zip")
+                .Select(s => new PackageHelpInfo(s, true))
+                .Where(p => !unpackedPackageNames.Contains(p.Name))
+                .Concat(unpackedPackages)
+                .OrderBy(p => p.Name)
+                .ToArray();
+
+            if (packages.Length == 0)
+            {
+                Console.WriteLine("  There are no packages.");
+            }
+            else
+            {
+                var longestLength = packages.Max(s => s.Name.Length);
+                var format = "  {0, -" + longestLength + "}  {1}";
+
+                foreach (var package in packages)
+                    Console.WriteLine(format, package.Name, package.GetDescription());
+            }
+        }
+
+        private static void PackageHelp(string path)
+        {
+            var packagePath = GetPackagePath(path);
+            if (packagePath == null)
+                Console.WriteLine("Package does not exist: " + Path.GetFileName(path));
+            else if (packagePath.EndsWith(".zip", StringComparison.InvariantCultureIgnoreCase))
+                Console.WriteLine("Package is compressed: " + Path.GetFileName(path));
+            else
+                PackageDirectoryHelp(packagePath);
+        }
+        private static string GetPackagePath(string packagePath)
+        {
+            if (packagePath == null)
+                return null;
+
+            var path = packagePath;
+            if (!Path.IsPathRooted(path))
+                path = Path.Combine(DefaultPackageDirectory(), path);
+
+            if (CheckPackageFileOrFolder(ref path))
+                return path;
+            path = InsertToolsFolderName(path);
+            if (CheckPackageFileOrFolder(ref path))
+                return path;
+
+            return null;
+        }
+        private static void PackageDirectoryHelp(string packagePath)
+        {
+            var info = new PackageHelpInfo(packagePath, false);
+
+            Console.WriteLine("Package:  {0}", info.Name);
+            Console.WriteLine("path:     {0}", info.Path);
+            Console.WriteLine(info.GetDescription());
+
+            var parameters = info.GetParameters();
+            if (parameters.Length == 0)
+            {
+                Console.WriteLine("Package has no parameter.");
+                return;
+            }
+            Console.WriteLine("Parameters:");
+            Console.WriteLine("-----------");
+
+            var longestLength = Math.Min(parameters.Max(s => s.Name.Length), 40);
+            var format = "  {0, -" + longestLength + "}  {1}";
+            var maxLength = Math.Max(62 - longestLength, 20);
+
+            foreach (var parameter in parameters)
+            {
+                Console.WriteLine(format, parameter.Name, parameter.Description);
+                var value = parameter.DefaultValue;
+                if (!string.IsNullOrEmpty(value))
+                    Console.WriteLine(format, " ", "Default: " + (value.Length <= maxLength ? value : value.Substring(0, maxLength) + "...")) ;
+            }
+        }
     }
 }
