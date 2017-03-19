@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>SenseNet.SnAdmin</id>
+    <version>1.4.0</version>
+    <title>Sense/Net SnAdmin tool for package execution.</title>
+    <authors>kavics,tusmester</authors>
+    <owners>Sense/Net</owners>
+    <licenseUrl>https://github.com/SenseNet/sn-admin/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/SenseNet/sn-admin</projectUrl>
+    <iconUrl>https://avatars2.githubusercontent.com/u/4069121?v=3&amp;s=200</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Upgrade and package executor tool for Sense/Net ECM.</description>
+    <releaseNotes>Initial release.</releaseNotes>
+    <copyright>Copyright © Sense/Net Inc.</copyright>
+    <tags>sensenet ecm ecms</tags>
+  </metadata>
+  <files>
+    <file src="bin\Release\Ionic.Zip.dll" target="content\Admin" />
+    <file src="bin\Release\SnAdmin.exe" target="content\Admin" />
+    <file src="bin\Release\SnAdmin.exe.config" target="content\Admin" />
+    <file src="bin\Release\SnAdmin.pdb" target="content\Admin" />
+  </files>
+</package>
