@@ -137,6 +137,9 @@ namespace SenseNet.Tools.SnAdmin
                 }
             }
 
+            if (targetDirectory == null)
+                targetDirectory = SearchTargetDirectory();
+
             parameters = prms.ToArray();
 
             return true;
@@ -147,9 +150,6 @@ namespace SenseNet.Tools.SnAdmin
         }
         private static bool CheckTargetDirectory(string targetDirectory)
         {
-            if (targetDirectory == null)
-                targetDirectory = SearchTargetDirectory();
-
             if (Directory.Exists(targetDirectory))
                 return true;
 
