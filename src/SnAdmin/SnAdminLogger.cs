@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
-using IO = System.IO;
 
 namespace SenseNet.Tools.SnAdmin
 {
@@ -29,7 +28,7 @@ namespace SenseNet.Tools.SnAdmin
         public static void Create(LogLevel level, string logfilePath = null)
         {
             Level = level;
-            _loggers = new[] { new SnAdminLogger(), new SnAdminConsoleLogger() };
+            _loggers = new ISnAdminLogger[] { new SnAdminLogger(), new SnAdminConsoleLogger() };
             foreach (var logger in _loggers)
                 logger.Initialize(level, logfilePath);
         }
@@ -53,7 +52,7 @@ namespace SenseNet.Tools.SnAdmin
         }
         public static void LogWrite(string format, params object[] parameters)
         {
-            var msg = String.Format(format, parameters);
+            var msg = string.Format(format, parameters);
             foreach (var logger in _loggers)
                 if (logger.AcceptedLevel >= Level)
                     logger.Write(msg);
@@ -66,14 +65,14 @@ namespace SenseNet.Tools.SnAdmin
         }
         public static void LogWriteLine(string format, params object[] parameters)
         {
-            var msg = String.Format(format, parameters);
+            var msg = string.Format(format, parameters);
             foreach (var logger in _loggers)
                 if (logger.AcceptedLevel >= Level)
                     logger.WriteLine(msg);
         }
         public static void LogWarningMessage(string message)
         {
-            var msg = String.Concat("WARNING: ", message);
+            var msg = string.Concat("WARNING: ", message);
             foreach (var logger in _loggers)
                 if (logger.AcceptedLevel >= Level)
                     logger.WriteLine(msg);
@@ -122,7 +121,7 @@ namespace SenseNet.Tools.SnAdmin
                 sb.Append(": ");
                 sb.AppendLine(e.Message);
 
-                var fileNotFoundException = e as System.IO.FileNotFoundException;
+                var fileNotFoundException = e as FileNotFoundException;
                 if (fileNotFoundException != null)
                 {
                     sb.AppendLine("FUSION LOG:");
@@ -140,13 +139,15 @@ namespace SenseNet.Tools.SnAdmin
 
         protected Dictionary<char, string> _lines;
 
-        public virtual LogLevel AcceptedLevel { get { return LogLevel.File; } }
+        public virtual LogLevel AcceptedLevel => LogLevel.File;
 
         public SnAdminLogger()
         {
-            _lines = new Dictionary<char, string>();
-            _lines['='] = new StringBuilder().Append('=', LINELENGTH - 1).ToString();
-            _lines['-'] = new StringBuilder().Append('-', LINELENGTH - 1).ToString();
+            _lines = new Dictionary<char, string>
+            {
+                ['='] = new StringBuilder().Append('=', LINELENGTH - 1).ToString(),
+                ['-'] = new StringBuilder().Append('-', LINELENGTH - 1).ToString()
+            };
         }
 
         public virtual void Initialize(LogLevel level, string logFilePath)
@@ -181,10 +182,9 @@ namespace SenseNet.Tools.SnAdmin
 
         //================================================================================================================= Logger
 
-        private static readonly string CR = Environment.NewLine;
         public string LogFilePath { get; private set; }
 
-        private string _logFolder = null;
+        private string _logFolder;
         public string LogFolder
         {
             get
@@ -231,11 +231,11 @@ namespace SenseNet.Tools.SnAdmin
             else
                 LogFilePath = Path.Combine(LogFolder, Logger.PackageName + DateTime.UtcNow.ToString("_yyyyMMdd-HHmmss") + ".log");
 
-            if (!IO.File.Exists(LogFilePath))
+            if (!File.Exists(LogFilePath))
             {
-                using (FileStream fs = new FileStream(LogFilePath, FileMode.Create))
+                using (var fs = new FileStream(LogFilePath, FileMode.Create))
                 {
-                    using (StreamWriter wr = new StreamWriter(fs))
+                    using (var wr = new StreamWriter(fs))
                     {
                         wr.WriteLine("");
                     }
@@ -246,11 +246,10 @@ namespace SenseNet.Tools.SnAdmin
         {
             return new StreamWriter(LogFilePath, true);
         }
-        private void WriteToLog(StreamWriter writer, object[] values, bool newLine)
+        private void WriteToLog(TextWriter writer, object[] values, bool newLine)
         {
             if (_lineStart)
             {
-                //writer.Write(DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.ffff"));
                 writer.Write(DateTime.UtcNow.ToString("HH:mm:ss.ffff"));
                 writer.Write("\t");
             }
@@ -281,9 +280,9 @@ namespace SenseNet.Tools.SnAdmin
         private void WriteToLog(object[] values, bool newLine)
         {
             foreach (object value in values)
-                Console.Write(value);
+                SnAdmin.Output.Write(value);
             if (newLine)
-                Console.WriteLine();
+                SnAdmin.Output.WriteLine();
         }
     }
 }

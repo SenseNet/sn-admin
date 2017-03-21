@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using System.Xml;
 
 namespace SenseNet.Tools.SnAdmin
@@ -28,11 +22,8 @@ namespace SenseNet.Tools.SnAdmin
         {
             if (_manifest == null)
             {
-                var xml = new XmlDocument();
-                var manifestPath = Directory.GetFiles(Path).FirstOrDefault();
-                if (manifestPath != null)
-                    xml.Load(manifestPath);
-                _manifest = xml;
+                var manifestPath = Disk.GetFiles(Path).FirstOrDefault();
+                _manifest = Disk.LoadManifest(manifestPath);
             }
             return _manifest;
         }
