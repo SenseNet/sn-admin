@@ -8,7 +8,7 @@
     <owners>Sense/Net</owners>
     <licenseUrl>https://github.com/SenseNet/sn-admin/blob/master/LICENSE</licenseUrl>
     <projectUrl>https://github.com/SenseNet/sn-admin</projectUrl>
-    <iconUrl>https://avatars2.githubusercontent.com/u/4069121?v=3&amp;s=200</iconUrl>
+    <iconUrl>https://raw.githubusercontent.com/SenseNet/sn-resources/master/images/sn-icon/sensenet-icon-64.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Upgrade and package executor tool for Sense/Net ECM.</description>
     <releaseNotes>Initial release.</releaseNotes>
@@ -16,9 +16,9 @@
     <tags>sensenet ecm ecms</tags>
   </metadata>
   <files>
-    <file src="bin\Release\Ionic.Zip.dll" target="content\Admin" />
-    <file src="bin\Release\SnAdmin.exe" target="content\Admin" />
-    <file src="bin\Release\SnAdmin.exe.config" target="content\Admin" />
-    <file src="bin\Release\SnAdmin.pdb" target="content\Admin" />
+    <file src="bin\Release\Ionic.Zip.dll" target="content\Admin\bin" />
+    <file src="bin\Release\SnAdmin.exe" target="content\Admin\bin" />
+    <file src="bin\Release\SnAdmin.exe.config" target="content\Admin\bin" />
+    <file src="bin\Release\SnAdmin.pdb" target="content\Admin\bin" />
   </files>
 </package>
