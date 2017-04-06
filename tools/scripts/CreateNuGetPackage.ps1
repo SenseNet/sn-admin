@@ -1,0 +1,1 @@
+﻿nuget pack ..\..\src\SnAdmin\SnAdmin.nuspec -properties Configuration=Release

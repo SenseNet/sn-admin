@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Xml;
-using Ionic.Zip;
 
 namespace SenseNet.Tools.SnAdmin
 {
@@ -416,11 +416,9 @@ namespace SenseNet.Tools.SnAdmin
             }
 
             Logger.LogWriteLine("Extracting ...");
-            using (var zip = ZipFile.Read(package))
-            {
-                foreach (var e in zip.Entries)
-                    e.Extract(zipTarget);
-            }
+
+            ZipFile.ExtractToDirectory(package, zipTarget);
+            
             Logger.LogWriteLine("Ok.");
 
             return zipTarget;
