@@ -184,7 +184,9 @@ namespace SenseNet.Tools.SnAdmin
             {
                 try
                 {
+                    Logger.LogWriteLine("Creating environment");
                     workerExe = CreateSandbox(targetDirectory, sandboxDirectory);
+                    Logger.LogWriteLine("Environment created.");
 
                     var appBasePath = Path.GetDirectoryName(workerExe);
                     AppDomain.CreateDomain(ToolName + "WorkerDomain" + phase, null, appBasePath, null, false);
@@ -390,7 +392,7 @@ namespace SenseNet.Tools.SnAdmin
             if (!Disk.DirectoryExists(sandboxFolder))
                 Disk.CreateDirectory(sandboxFolder);
             else
-                Disk.DeleteAllFrom(sandboxFolder);
+                Retry(12, 5000, () => Disk.DeleteAllFrom(sandboxFolder));
             return sandboxFolder;
         }
 
@@ -418,7 +420,7 @@ namespace SenseNet.Tools.SnAdmin
             Logger.LogWriteLine("Extracting ...");
 
             ZipFile.ExtractToDirectory(package, zipTarget);
-            
+
             Logger.LogWriteLine("Ok.");
 
             return zipTarget;
@@ -537,6 +539,41 @@ namespace SenseNet.Tools.SnAdmin
                 if (!string.IsNullOrEmpty(value))
                     Output.WriteLine(format, " ", "Default: " + (value.Length <= maxLength ? value : value.Substring(0, maxLength) + "..."));
             }
+        }
+
+        private static void Retry(int count, int milliseconds, Action callback)
+        {
+            Retry(count, milliseconds, typeof(Exception), callback);
+        }
+        private static void Retry(int count, int waitMilliseconds, Type caughtExceptionType, Action callback)
+        {
+            var retryCount = count;
+            Exception lastException = null;
+
+            while (retryCount > 0)
+            {
+                try
+                {
+                    callback();
+                    return;
+                }
+                catch (Exception e)
+                {
+                    // if the thrown exception's type is different than the provided (expected) one, throw it
+                    if (!caughtExceptionType.IsInstanceOfType(e))
+                        throw;
+
+                    Logger.LogWriteLine("ERROR: " + e.Message);
+                    Logger.LogWriteLine("Retrying");
+
+                    lastException = e;
+                    retryCount--;
+                    System.Threading.Thread.Sleep(waitMilliseconds);
+                }
+            }
+
+            if (lastException != null)
+                throw lastException;
         }
     }
 }
