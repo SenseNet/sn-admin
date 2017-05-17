@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>SenseNet.SnAdmin</id>
-    <version>1.4.0</version>
+    <version>1.4.1</version>
     <title>Sense/Net SnAdmin tool for package execution.</title>
     <authors>kavics,tusmester</authors>
     <owners>Sense/Net</owners>
@@ -16,7 +16,6 @@
     <tags>sensenet ecm ecms</tags>
   </metadata>
   <files>
-    <file src="bin\Release\Ionic.Zip.dll" target="content\Admin\bin" />
     <file src="bin\Release\SnAdmin.exe" target="content\Admin\bin" />
     <file src="bin\Release\SnAdmin.exe.config" target="content\Admin\bin" />
     <file src="bin\Release\SnAdmin.pdb" target="content\Admin\bin" />

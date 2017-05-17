@@ -3,9 +3,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 #if DEBUG
-[assembly: AssemblyTitle("SnAdmin (Debug)")]
+[assembly: AssemblyTitle("SnAdminTests (Debug)")]
 #else
-[assembly: AssemblyTitle("SnAdmin (Release)")]
+[assembly: AssemblyTitle("SnAdminTests (Release)")]
 #endif
 
 [assembly: AssemblyDescription("")]
@@ -20,6 +20,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyInformationalVersion("1.4.1.0")]
 
 [assembly: ComVisible(false)]
-[assembly: Guid("1B973251-9AAE-48D2-9FFF-408AA95CA576")]
-
-[assembly: InternalsVisibleTo("SnAdmin.Tests")]
+[assembly: Guid("670973c0-ce4a-407e-9953-cfa53d9ee099")]

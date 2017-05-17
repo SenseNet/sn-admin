@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.IO;
-using System.Reflection;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
-using Ionic.Zip;
-using System.Configuration;
 using System.Xml;
 
 namespace SenseNet.Tools.SnAdmin
@@ -17,14 +16,13 @@ namespace SenseNet.Tools.SnAdmin
         private const string RUNTIMEEXENAME = "SnAdminRuntime.exe";
         private const string SANDBOXDIRECTORYNAME = "run";
         private static string ToolTitle = "Sense/Net Admin ";
-        private static string ToolName = "SnAdmin";
-        internal static readonly string ParameterRegex = @"^([\w_]+):";
+        private const string ToolName = "SnAdmin";
 
-        private static readonly string PackagePreconditionExceptionTypeName = "PackagePreconditionException";
-        private static readonly string InvalidPackageExceptionTypeName = "InvalidPackageException";
+        private const string PackagePreconditionExceptionTypeName = "PackagePreconditionException";
+        private const string InvalidPackageExceptionTypeName = "InvalidPackageException";
 
-        private static string CR = Environment.NewLine;
-        private static string UsageScreen = String.Concat(
+        private static readonly string CR = Environment.NewLine;
+        private static readonly string UsageScreen = string.Concat(
             //         1         2         3         4         5         6         7         8
             //12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
             CR,
@@ -40,29 +38,27 @@ namespace SenseNet.Tools.SnAdmin
         );
         #endregion
 
-        private static int Main(string[] args)
+        internal static TextWriter Output { get; set; } = Console.Out;
+
+        internal static int Main(string[] args)
         {
             ToolTitle += Assembly.GetExecutingAssembly().GetName().Version;
             if (args.FirstOrDefault(a => a.ToUpper() == "-WAIT") != null)
             {
-                Console.WriteLine("Running in wait mode - now you can attach to the process with a debugger.");
-                Console.WriteLine("Press ENTER to continue.");
+                Output.WriteLine("Running in wait mode - now you can attach to the process with a debugger.");
+                Output.WriteLine("Press ENTER to continue.");
                 Console.ReadLine();
             }
 
-            string packagePath;
-            string sandboxDirectory = null;
-            string targetDirectory;
-            string logFilePath;
-            LogLevel logLevel;
-            bool help;
-            bool schema;
-            bool wait;
-            string[] parameters;
-
-            if (!ParseParameters(args, out packagePath, out targetDirectory/*, out phase*/, out parameters, out logFilePath, out logLevel, out help, out schema, out wait))
+            var arguments = new Arguments();
+            if (!arguments.Parse(args))
                 return -1;
 
+            var packagePath = arguments.PackagePath;
+            var help = arguments.Help;
+            var parameters = arguments.Parameters;
+
+            var targetDirectory = arguments.TargetDirectory ?? Disk.SearchTargetDirectory();
             if (!CheckTargetDirectory(targetDirectory))
                 return -1;
 
@@ -75,82 +71,21 @@ namespace SenseNet.Tools.SnAdmin
                 return 0;
             }
 
+            string sandboxDirectory = null;
             if (!CheckPackage(ref packagePath, ref sandboxDirectory))
                 return -1;
 
             Logger.PackageName = Path.GetFileName(packagePath);
 
-            Logger.Create(logLevel, logFilePath);
+            Logger.Create(arguments.LogLevel, arguments.LogFilePath);
             Debug.WriteLine("##> " + Logger.Level);
 
-            return ExecuteGlobal(packagePath, sandboxDirectory, targetDirectory, parameters, help, schema, wait);
+            return ExecuteGlobal(packagePath, sandboxDirectory, targetDirectory, parameters, arguments.Schema, arguments.Wait);
         }
 
-        private static bool ParseParameters(string[] args, out string packagePath, out string targetDirectory, out string[] parameters, out string logFilePath, out LogLevel logLevel, out bool help, out bool schema, out bool wait)
-        {
-            packagePath = null;
-            targetDirectory = null;
-            logFilePath = null;
-            wait = false;
-            help = false;
-            schema = false;
-            logLevel = LogLevel.Default;
-            var prms = new List<string>();
-            var argIndex = -1;
-
-            foreach (var arg in args)
-            {
-                argIndex++;
-
-                if (arg.StartsWith("-"))
-                {
-                    var verb = arg.Substring(1).ToUpper();
-                    switch (verb)
-                    {
-                        case "?": help = true; break;
-                        case "HELP": help = true; break;
-                        case "SCHEMA": schema = true; break;
-                        case "WAIT": wait = true; break;
-                    }
-                }
-                else if (arg.StartsWith("LOG:", StringComparison.OrdinalIgnoreCase))
-                {
-                    logFilePath = arg.Substring(4);
-                }
-                else if (arg.StartsWith("LOGLEVEL:", StringComparison.OrdinalIgnoreCase))
-                {
-                    logLevel = (LogLevel)Enum.Parse(typeof(LogLevel), arg.Substring(9));
-                }
-                else if (arg.StartsWith("TARGETDIRECTORY:", StringComparison.OrdinalIgnoreCase))
-                {
-                    targetDirectory = arg.Substring(16).Trim('"');
-                }
-                else if (IsValidParameter(arg) && argIndex > 0)
-                {
-                    // Recognise this as a 'parameter' only if it is not the first one
-                    // (which must be the package path without a param name prefix).
-                    prms.Add(QuoteParameter(arg));
-                }
-                else if (packagePath == null)
-                {
-                    packagePath = arg;
-                }
-            }
-
-            if (targetDirectory == null)
-                targetDirectory = SearchTargetDirectory();
-
-            parameters = prms.ToArray();
-
-            return true;
-        }
-        private static bool IsValidParameter(string parameter)
-        {
-            return System.Text.RegularExpressions.Regex.Match(parameter, ParameterRegex, System.Text.RegularExpressions.RegexOptions.IgnoreCase).Success;
-        }
         private static bool CheckTargetDirectory(string targetDirectory)
         {
-            if (Directory.Exists(targetDirectory))
+            if (Disk.DirectoryExists(targetDirectory))
                 return true;
 
             PrintParameterError("Given target directory does not exist: " + targetDirectory);
@@ -166,7 +101,7 @@ namespace SenseNet.Tools.SnAdmin
             }
 
             if (!Path.IsPathRooted(packagePath))
-                packagePath = Path.Combine(DefaultPackageDirectory(), packagePath);
+                packagePath = Path.Combine(Disk.DefaultPackageDirectory(), packagePath);
 
             // Sandbox directory should always be the parent of the provided package, 
             // even if we find the package in the tools subfolder.
@@ -198,15 +133,15 @@ namespace SenseNet.Tools.SnAdmin
 
             if (packagePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
             {
-                if (!File.Exists(packagePath))
+                if (!Disk.FileExists(packagePath))
                     return false;
             }
             else
             {
-                if (!Directory.Exists(packagePath))
+                if (!Disk.DirectoryExists(packagePath))
                 {
                     var packageZipPath = packagePath + ".zip";
-                    if (!File.Exists(packageZipPath))
+                    if (!Disk.FileExists(packageZipPath))
                         return false;
 
                     packagePath = packageZipPath;
@@ -223,15 +158,15 @@ namespace SenseNet.Tools.SnAdmin
 
         private static void PrintParameterError(string message)
         {
-            Console.WriteLine(ToolTitle);
-            Console.WriteLine(message);
-            Console.WriteLine(UsageScreen);
-            Console.WriteLine("Aborted.");
+            Output.WriteLine(ToolTitle);
+            Output.WriteLine(message);
+            Output.WriteLine(UsageScreen);
+            Output.WriteLine("Aborted.");
         }
 
-        private static int ExecuteGlobal(string packagePath, string sandboxDirectory, string targetDirectory, string[] parameters, bool help, bool schema, bool wait)
+        private static int ExecuteGlobal(string packagePath, string sandboxDirectory, string targetDirectory, string[] parameters, bool schema, bool wait)
         {
-            Console.WriteLine();
+            Output.WriteLine();
 
             Logger.LogTitle(ToolTitle);
             Logger.LogWriteLine("Start at {0}", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
@@ -240,19 +175,21 @@ namespace SenseNet.Tools.SnAdmin
 
             packagePath = Unpack(packagePath);
 
-            var result = 0;
+            int result;
             var phase = 0;
             var errors = 0;
-            var workerExe = string.Empty;
+            string workerExe;
 
             while (true)
             {
                 try
                 {
+                    Logger.LogWriteLine("Creating environment");
                     workerExe = CreateSandbox(targetDirectory, sandboxDirectory);
+                    Logger.LogWriteLine("Environment created.");
 
                     var appBasePath = Path.GetDirectoryName(workerExe);
-                    var workerDomain = AppDomain.CreateDomain(ToolName + "WorkerDomain" + phase, null, appBasePath, null, false);
+                    AppDomain.CreateDomain(ToolName + "WorkerDomain" + phase, null, appBasePath, null, false);
                 }
                 catch (Exception ex)
                 {
@@ -271,27 +208,16 @@ namespace SenseNet.Tools.SnAdmin
 
                 var prms = new List<string> { Quote(packagePath), targetDirParameter, phaseParameter, Quote(logParameter), logLevelParameter };
                 prms.AddRange(parameters);
-                if (help)
-                    prms.Add("-HELP");
                 if (wait)
                     prms.Add("-WAIT");
                 if (schema)
                     prms.Add("-SCHEMA");
 
                 var processArgs = string.Join(" ", prms);
-                var startInfo = new ProcessStartInfo(workerExe, processArgs)
-                {
-                    UseShellExecute = false,
-                    WorkingDirectory = Path.GetDirectoryName(workerExe),
-                    CreateNoWindow = false,
-                };
 
-                Process process;
                 try
                 {
-                    process = Process.Start(startInfo);
-                    process.WaitForExit();
-                    result = process.ExitCode;
+                    result = ProcessActivator.ExecuteProcess(workerExe, processArgs);
                 }
                 catch (Exception e)
                 {
@@ -349,12 +275,12 @@ namespace SenseNet.Tools.SnAdmin
                 msgLevel = MessageLevel.Error;
             WriteMessage(packagePath, msgLevel);
 
-            Console.WriteLine("See log file: {0}", Logger.GetLogFileName());
-            if (Debugger.IsAttached)
+            Output.WriteLine("See log file: {0}", Logger.GetLogFileName());
+            if (Debugger.IsAttached && ProcessActivator.Instance is SnAdminRuntimeActivator)
             {
-                Console.Write("[press any key] ");
+                Output.Write("[press any key] ");
                 Console.ReadKey();
-                Console.WriteLine();
+                Output.WriteLine();
             }
             return result;
         }
@@ -362,55 +288,37 @@ namespace SenseNet.Tools.SnAdmin
         {
             return "\"" + prm + "\"";
         }
-        private static string QuoteParameter(string prm)
-        {
-            if (prm == null)
-                return null;
-
-            // Insert quotes around the parameter value (if there is none) so that this
-            // parameter can be passed as a command line argument to the runtime tool.
-            // 'Param1:x y' --> 'Param1:"x y"'
-
-            var valueIndex = prm.IndexOf(":", StringComparison.InvariantCultureIgnoreCase);
-
-            // check if there is already a quote there
-            if (prm.Substring(valueIndex + 1).StartsWith("\""))
-                return prm;
-
-            return prm.Insert(valueIndex + 1, "\"") + "\"";
-        }
 
         private static string GetPackagePreconditionExceptionMessage(Exception e)
         {
-            if (e != null && e.GetType().Name == PackagePreconditionExceptionTypeName)
+            if (e?.GetType().Name == PackagePreconditionExceptionTypeName)
                 return e.Message;
-            e = e.InnerException;
-            if (e != null && e.GetType().Name == PackagePreconditionExceptionTypeName)
-                return e.Message;
-            return null;
+
+            e = e?.InnerException;
+
+            return e?.GetType().Name == PackagePreconditionExceptionTypeName ? e.Message : null;
         }
         private static string GetInvalidPackageExceptionMessage(Exception e)
         {
-            if (e != null && e.GetType().Name == InvalidPackageExceptionTypeName)
+            if (e?.GetType().Name == InvalidPackageExceptionTypeName)
                 return e.Message;
-            e = e.InnerException;
-            if (e != null && e.GetType().Name == InvalidPackageExceptionTypeName)
-                return e.Message;
-            return null;
+
+            e = e?.InnerException;
+
+            return e?.GetType().Name == InvalidPackageExceptionTypeName ? e.Message : null;
         }
 
         private enum MessageLevel { Success, Warning, Error }
 
         private static void WriteMessage(string packagePath, MessageLevel level)
         {
-            var files = Directory.GetFiles(packagePath);
+            var files = Disk.GetFiles(packagePath);
             if (files.Length != 1)
                 return;
 
-            var manifestXml = new XmlDocument();
-            manifestXml.Load(files[0]);
+            var manifestXml = Disk.LoadManifest(files[0]);
+            string elementName;
 
-            var elementName = string.Empty;
             switch (level)
             {
                 case MessageLevel.Success: elementName = "SuccessMessage"; break;
@@ -418,7 +326,7 @@ namespace SenseNet.Tools.SnAdmin
                 case MessageLevel.Error: elementName = "ErrorMessage"; break;
                 default: throw new NotSupportedException("Unknown level: " + level);
             }
-            var msgElement = (XmlElement)manifestXml.DocumentElement.SelectSingleNode(elementName);
+            var msgElement = (XmlElement)manifestXml.DocumentElement?.SelectSingleNode(elementName);
             if (msgElement == null)
                 return;
 
@@ -450,42 +358,6 @@ namespace SenseNet.Tools.SnAdmin
             Logger.LogWriteLine(string.Empty);
         }
 
-        private static string SearchTargetDirectory()
-        {
-            var targetDir = ConfigurationManager.AppSettings["TargetDirectory"];
-            if (!string.IsNullOrEmpty(targetDir))
-                return targetDir;
-
-            // default location: ..\webfolder\Admin\bin
-            var workerExe = Assembly.GetExecutingAssembly().Location;
-            var path = workerExe;
-
-            // go up on the parent chain
-            path = Path.GetDirectoryName(path);
-            path = Path.GetDirectoryName(path);
-
-            // get the name of the container directory (should be 'Admin')
-            var adminDirName = Path.GetFileName(path);
-            path = Path.GetDirectoryName(path);
-
-            if (string.Compare(adminDirName, "Admin", StringComparison.OrdinalIgnoreCase) == 0)
-            {
-                // look for the web.config
-                if (System.IO.File.Exists(Path.Combine(path, "web.config")))
-                    return path;
-            }
-            throw new ApplicationException("Configure the TargetDirectory. This path does not exist or it is not a valid target: " + path);
-        }
-        private static string DefaultPackageDirectory()
-        {
-            var pkgDir = ConfigurationManager.AppSettings["PackageDirectory"];
-            if (!string.IsNullOrEmpty(pkgDir))
-                return pkgDir;
-            var workerExe = Assembly.GetExecutingAssembly().Location;
-            pkgDir = Path.GetDirectoryName(Path.GetDirectoryName(workerExe));
-            return pkgDir;
-        }
-
         private static string CreateSandbox(string targetDirectory, string sandboxDirectory)
         {
             var sandboxPath = EnsureEmptySandbox(sandboxDirectory);
@@ -494,52 +366,39 @@ namespace SenseNet.Tools.SnAdmin
             // #1 copy assemblies from webBin to sandbox
             var paths = GetRelevantFiles(webBinPath);
             foreach (var filePath in paths)
-                File.Copy(filePath, Path.Combine(sandboxPath, Path.GetFileName(filePath)));
+                Disk.FileCopy(filePath, Path.Combine(sandboxPath, Path.GetFileName(filePath)));
 
             // #2 copy missing files from Tools directory
             var toolsDir = Path.Combine(targetDirectory, "Tools");
             var toolPaths = GetRelevantFiles(toolsDir);
-            var missingNames = toolPaths.Select(p => Path.GetFileName(p))
-                .Except(paths.Select(q => Path.GetFileName(q))).OrderBy(r => r)
+            var missingNames = toolPaths.Select(Path.GetFileName)
+                .Except(paths.Select(Path.GetFileName)).OrderBy(r => r)
                 .Where(r => !r.ToLower().Contains(".vshost.exe"))
                 .ToArray();
             foreach (var fileName in missingNames)
-                File.Copy(Path.Combine(toolsDir, fileName), Path.Combine(sandboxPath, fileName));
+                Disk.FileCopy(Path.Combine(toolsDir, fileName), Path.Combine(sandboxPath, fileName));
 
             // #3 return with path of the worker exe
             return Path.Combine(sandboxPath, RUNTIMEEXENAME);
         }
-        private static string[] _relevantExtensions = ".dll;.exe;.pdb;.config".Split(';');
+
         private static string[] GetRelevantFiles(string dir)
         {
-            //return Directory.EnumerateFiles(dir, "*.*").Where(p => _relevantExtensions.Contains(Path.GetExtension(p).ToLower())).ToArray();
-            return Directory.GetFiles(dir);
+            return Disk.GetFiles(dir);
         }
         private static string EnsureEmptySandbox(string packagesDirectory)
         {
             var sandboxFolder = Path.Combine(packagesDirectory, SANDBOXDIRECTORYNAME);
-            if (!Directory.Exists(sandboxFolder))
-                Directory.CreateDirectory(sandboxFolder);
+            if (!Disk.DirectoryExists(sandboxFolder))
+                Disk.CreateDirectory(sandboxFolder);
             else
-                DeleteAllFrom(sandboxFolder);
+                Retry(12, 5000, () => Disk.DeleteAllFrom(sandboxFolder));
             return sandboxFolder;
-        }
-        private static void DeleteAllFrom(string sandboxFolder)
-        {
-            var sandboxInfo = new DirectoryInfo(sandboxFolder);
-            foreach (FileInfo file in sandboxInfo.GetFiles())
-            {
-                if (file.IsReadOnly)
-                    file.IsReadOnly = false;
-                file.Delete();
-            }
-            foreach (DirectoryInfo dir in sandboxInfo.GetDirectories())
-                dir.Delete(true);
         }
 
         private static string Unpack(string package)
         {
-            if (Directory.Exists(package))
+            if (Disk.DirectoryExists(package))
                 return package;
 
             var pkgFolder = Path.GetDirectoryName(package);
@@ -547,66 +406,64 @@ namespace SenseNet.Tools.SnAdmin
 
             Logger.LogWriteLine("Package directory: " + zipTarget);
 
-            if (Directory.Exists(zipTarget))
+            if (Disk.DirectoryExists(zipTarget))
             {
-                DeleteAllFrom(zipTarget);
+                Disk.DeleteAllFrom(zipTarget);
                 Logger.LogWriteLine("Old files and directories are deleted.");
             }
             else
             {
-                Directory.CreateDirectory(zipTarget);
+                Disk.CreateDirectory(zipTarget);
                 Logger.LogWriteLine("Package directory created.");
             }
 
             Logger.LogWriteLine("Extracting ...");
-            using (ZipFile zip = ZipFile.Read(package))
-            {
-                foreach (var e in zip.Entries)
-                    e.Extract(zipTarget);
-            }
+
+            ZipFile.ExtractToDirectory(package, zipTarget);
+
             Logger.LogWriteLine("Ok.");
 
             return zipTarget;
         }
 
-        private static readonly string[] DisabledPackageNames = {"App_Data", "bin", "log", "run", "tools"};
+        private static readonly string[] DisabledPackageNames = { "App_Data", "bin", "log", "run", "tools" };
         private static void ListPackages()
         {
-            Console.WriteLine(ToolTitle);
+            Output.WriteLine(ToolTitle);
 
-            Console.WriteLine("Upgrade and package executor tool for Sense/Net ECM.");
+            Output.WriteLine("Upgrade and package executor tool for Sense/Net ECM.");
 
-            Console.WriteLine(UsageScreen);
-            Console.WriteLine("Available packages");
-            Console.WriteLine("==================");
-            Console.WriteLine();
+            Output.WriteLine(UsageScreen);
+            Output.WriteLine("Available packages");
+            Output.WriteLine("==================");
+            Output.WriteLine();
 
-            var packageDirectory = DefaultPackageDirectory();
+            var packageDirectory = Disk.DefaultPackageDirectory();
             PrintPackages(packageDirectory);
 
             var toolsDirectory = Path.Combine(packageDirectory, "tools");
-            if (!Directory.Exists(toolsDirectory))
+            if (!Disk.DirectoryExists(toolsDirectory))
                 return;
 
-            Console.WriteLine();
-            Console.WriteLine("Available tools");
-            Console.WriteLine("---------------");
-            Console.WriteLine();
+            Output.WriteLine();
+            Output.WriteLine("Available tools");
+            Output.WriteLine("---------------");
+            Output.WriteLine();
 
             PrintPackages(toolsDirectory);
 
-            Console.WriteLine();
+            Output.WriteLine();
         }
         private static void PrintPackages(string directory)
         {
-            var unpackedPackages = Directory.GetDirectories(directory)
+            var unpackedPackages = Disk.GetDirectories(directory)
                 .Select(s => new PackageHelpInfo(s, false))
                 .Where(p => !DisabledPackageNames.Contains(p.Name, StringComparer.OrdinalIgnoreCase))
                 .ToArray();
             var unpackedPackageNames = unpackedPackages
                 .Select(p => p.Name)
                 .ToArray();
-            var packages = Directory.GetFiles(directory, "*.zip")
+            var packages = Disk.GetFiles(directory, "*.zip")
                 .Select(s => new PackageHelpInfo(s, true))
                 .Where(p => !unpackedPackageNames.Contains(p.Name))
                 .Concat(unpackedPackages)
@@ -615,7 +472,7 @@ namespace SenseNet.Tools.SnAdmin
 
             if (packages.Length == 0)
             {
-                Console.WriteLine("  There are no packages.");
+                Output.WriteLine("  There are no packages.");
             }
             else
             {
@@ -623,7 +480,7 @@ namespace SenseNet.Tools.SnAdmin
                 var format = "  {0, -" + longestLength + "}  {1}";
 
                 foreach (var package in packages)
-                    Console.WriteLine(format, package.Name, package.GetDescription());
+                    Output.WriteLine(format, package.Name, package.GetDescription());
             }
         }
 
@@ -631,9 +488,9 @@ namespace SenseNet.Tools.SnAdmin
         {
             var packagePath = GetPackagePath(path);
             if (packagePath == null)
-                Console.WriteLine("Package does not exist: " + Path.GetFileName(path));
+                Output.WriteLine("Package does not exist: " + Path.GetFileName(path));
             else if (packagePath.EndsWith(".zip", StringComparison.InvariantCultureIgnoreCase))
-                Console.WriteLine("Package is compressed: " + Path.GetFileName(path));
+                Output.WriteLine("Package is compressed: " + Path.GetFileName(path));
             else
                 PackageDirectoryHelp(packagePath);
         }
@@ -644,7 +501,7 @@ namespace SenseNet.Tools.SnAdmin
 
             var path = packagePath;
             if (!Path.IsPathRooted(path))
-                path = Path.Combine(DefaultPackageDirectory(), path);
+                path = Path.Combine(Disk.DefaultPackageDirectory(), path);
 
             if (CheckPackageFileOrFolder(ref path))
                 return path;
@@ -658,18 +515,18 @@ namespace SenseNet.Tools.SnAdmin
         {
             var info = new PackageHelpInfo(packagePath, false);
 
-            Console.WriteLine("Package:  {0}", info.Name);
-            Console.WriteLine("path:     {0}", info.Path);
-            Console.WriteLine(info.GetDescription());
+            Output.WriteLine("Package:  {0}", info.Name);
+            Output.WriteLine("path:     {0}", info.Path);
+            Output.WriteLine(info.GetDescription());
 
             var parameters = info.GetParameters();
             if (parameters.Length == 0)
             {
-                Console.WriteLine("Package has no parameter.");
+                Output.WriteLine("Package has no parameter.");
                 return;
             }
-            Console.WriteLine("Parameters:");
-            Console.WriteLine("-----------");
+            Output.WriteLine("Parameters:");
+            Output.WriteLine("-----------");
 
             var longestLength = Math.Min(parameters.Max(s => s.Name.Length), 40);
             var format = "  {0, -" + longestLength + "}  {1}";
@@ -677,11 +534,46 @@ namespace SenseNet.Tools.SnAdmin
 
             foreach (var parameter in parameters)
             {
-                Console.WriteLine(format, parameter.Name, parameter.Description);
+                Output.WriteLine(format, parameter.Name, parameter.Description);
                 var value = parameter.DefaultValue;
                 if (!string.IsNullOrEmpty(value))
-                    Console.WriteLine(format, " ", "Default: " + (value.Length <= maxLength ? value : value.Substring(0, maxLength) + "...")) ;
+                    Output.WriteLine(format, " ", "Default: " + (value.Length <= maxLength ? value : value.Substring(0, maxLength) + "..."));
             }
+        }
+
+        private static void Retry(int count, int milliseconds, Action callback)
+        {
+            Retry(count, milliseconds, typeof(Exception), callback);
+        }
+        private static void Retry(int count, int waitMilliseconds, Type caughtExceptionType, Action callback)
+        {
+            var retryCount = count;
+            Exception lastException = null;
+
+            while (retryCount > 0)
+            {
+                try
+                {
+                    callback();
+                    return;
+                }
+                catch (Exception e)
+                {
+                    // if the thrown exception's type is different than the provided (expected) one, throw it
+                    if (!caughtExceptionType.IsInstanceOfType(e))
+                        throw;
+
+                    Logger.LogWriteLine("ERROR: " + e.Message);
+                    Logger.LogWriteLine("Retrying");
+
+                    lastException = e;
+                    retryCount--;
+                    System.Threading.Thread.Sleep(waitMilliseconds);
+                }
+            }
+
+            if (lastException != null)
+                throw lastException;
         }
     }
 }
