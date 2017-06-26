@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>SenseNet.SnAdmin</id>
-    <version>1.4.1</version>
+    <version>1.4.2</version>
     <title>sensenet ECM SnAdmin tool for package execution.</title>
     <authors>kavics,tusmester</authors>
     <owners>Sense/Net</owners>
