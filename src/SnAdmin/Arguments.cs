@@ -5,7 +5,7 @@ namespace SenseNet.Tools.SnAdmin
 {
     internal class Arguments
     {
-        internal static readonly string ParameterRegex = @"^([\w_]+):";
+        internal static readonly string ParameterRegex = @"^(([\w_]+[\-]{0,1})+):";
 
         public string PackagePath { get; private set; }
         public string TargetDirectory { get; private set; }

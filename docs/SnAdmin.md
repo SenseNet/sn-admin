@@ -51,7 +51,7 @@ A package is related to a single component - either a built-in one, or a 3rd par
 
 ### Package type
 A package can have one of the following types:
-* **Install:** A component's first package must be an 'install' package. This is the package that injects a new component into the system. An install package must contain a new component identifier that is unknown to the system. Packages of this type can be executed only once.
+* **Install:** A component's first package must be an 'install' package. This is the package that injects a new component into the system. An install package must contain a new component identifier that is unknown to the system. Packages of this type can be executed multiple times by default - but only if the *multipleExecution* flag is switched on in the header (which is the default). In case package creators want to prevent multiple package execution, they have to include this flag in the header with a 'false' value.
 * **Patch:** Contains small modifications (e.g. a couple of new content to import or a bugfix in a dll). Usually patches form a chain where every package assumes the existence of all the previous ones but it is not mandatory. It is possible to control this behavior, see version control below.
 * **Tool:** Can contain small repeatable activities that do not perform significant changes but can be important because of business or technical reasons. A good example is performing an undo checkout on multiple content. Executing a package of this type does not change the component's version number but the execution is logged and registered in the db.
 
@@ -87,6 +87,7 @@ In the metadata section there are required and optional, independent and interre
     * **Install:** checks whether the component exists and registers it. Only a *non-existent* component can be installed.
     * **Patch:** this package always increase an *existing* component's version.
     * **Tool:** does not raise the version so it can be executed more than once.
+  * **multipleExecution** attribute (optional): if set to *false* in an Install package, the package cannot be executed multiple times. Default is *true*. 
 * **Id** element (line 3) (required): the value of this identifier must be unique. It can be a fully qualified name or even a GUID. See a good namespace convention on MSDN:
    * &lt;Company>.(&lt;Product>|&lt;Technology>)[.&lt;Feature>][.&lt;Subnamespace>]).
    
