@@ -6,7 +6,7 @@ Upgrade and package executor tool for [sensenet ECM](https://github.com/SenseNet
 
 SnAdmin can be considered as a framework built on a script language that describes a set of steps to be executed one after the other. sensenet ECM offers many [built-in steps](https://github.com/SenseNet/sensenet/blob/master/docs/snadmin-builtin-steps.md) and it is also possible for third party developers to [create custom steps](https://github.com/SenseNet/sensenet/blob/master/docs/snadmin-create-custom-step.md) to include in custom packages.
 
-The binaries of this tool are distributed via a _NuGet_ package, but you do not have to install it manually: it is installed as a dependency of the main Sense/Net ECM release.
+The binaries of this tool are distributed via a _NuGet_ package, but you do not have to install it manually: it is installed as a dependency of the main sensenet ECM release.
 
 ## Usage
 ### Executing a package
