@@ -15,6 +15,8 @@ namespace SenseNet.Tools.SnAdmin
         #region Constants
         private const string RUNTIMEEXENAME = "SnAdminRuntime.exe";
         private const string SANDBOXDIRECTORYNAME = "run";
+        private const string TOOLSDIRECTORYNAME = "Tools";
+        private const string RUNTIMESECTIONXPATH = "/configuration/runtime";
         private static string ToolTitle = "Sense/Net Admin ";
         private const string ToolName = "SnAdmin";
 
@@ -78,7 +80,9 @@ namespace SenseNet.Tools.SnAdmin
             Logger.PackageName = Path.GetFileName(packagePath);
 
             Logger.Create(arguments.LogLevel, arguments.LogFilePath);
-            Debug.WriteLine("##> " + Logger.Level);
+
+            // prepare runtime tool to run for the first time
+            InitializeEnvironment(targetDirectory);
 
             return ExecuteGlobal(packagePath, sandboxDirectory, targetDirectory, parameters, arguments.Schema, arguments.Wait);
         }
@@ -369,7 +373,7 @@ namespace SenseNet.Tools.SnAdmin
                 Disk.FileCopy(filePath, Path.Combine(sandboxPath, Path.GetFileName(filePath)));
 
             // #2 copy missing files from Tools directory
-            var toolsDir = Path.Combine(targetDirectory, "Tools");
+            var toolsDir = Path.Combine(targetDirectory, TOOLSDIRECTORYNAME);
             var toolPaths = GetRelevantFiles(toolsDir);
             var missingNames = toolPaths.Select(Path.GetFileName)
                 .Except(paths.Select(Path.GetFileName)).OrderBy(r => r)
@@ -394,6 +398,60 @@ namespace SenseNet.Tools.SnAdmin
             else
                 Retry(12, 5000, () => Disk.DeleteAllFrom(sandboxFolder));
             return sandboxFolder;
+        }
+
+        private static void InitializeEnvironment(string targetDirectory)
+        {
+            // Perform one-time initialization tasks in the target environment.
+            // - copy the runtime section from web.config to the Tools\SnAdminRuntime.exe.config
+
+            var runtimeConfigPath = Path.Combine(targetDirectory, TOOLSDIRECTORYNAME, RUNTIMEEXENAME + ".config");
+            var webConfigPath = Path.Combine(targetDirectory, "Web.config");
+
+            if (!Disk.FileExists(webConfigPath) || !Disk.FileExists(runtimeConfigPath))
+                return;
+
+            try
+            {
+                // load source file: web.config
+                var webConfig = new XmlDocument();
+                webConfig.Load(webConfigPath);
+
+                var runtimeNodeSource = webConfig.SelectSingleNode(RUNTIMESECTIONXPATH);
+                if (runtimeNodeSource == null)
+                    return;
+
+                // load target config
+                var runtimeConfig = new XmlDocument();
+                runtimeConfig.Load(runtimeConfigPath);
+                
+                var runtimeNodeTarget = runtimeConfig.SelectSingleNode(RUNTIMESECTIONXPATH);
+                if (runtimeNodeTarget != null)
+                {
+                    // If the target node already contains bindings or other meaningful info 
+                    // (other than a single comment line), abort the operation.
+                    if (runtimeNodeTarget.ChildNodes.Count > 1 ||
+                        (runtimeNodeTarget.FirstChild?.NodeType ?? XmlNodeType.Comment) != XmlNodeType.Comment)
+                        return;
+                }
+                else
+                {
+                    // Target node does not exist, create it.
+                    runtimeNodeTarget = runtimeConfig.CreateElement("runtime");
+                    runtimeConfig.DocumentElement?.AppendChild(runtimeNodeTarget);
+                }
+
+                Logger.LogWriteLine("Modifying runtime tool configuration.");
+
+                // copy bindings and save the target config file
+                runtimeNodeTarget.InnerXml = runtimeNodeSource.InnerXml;
+                runtimeConfig.Save(runtimeConfigPath);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWriteLine("Error during config modification.");
+                Logger.LogException(ex);
+            }
         }
 
         private static string Unpack(string package)
