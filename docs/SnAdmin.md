@@ -322,6 +322,8 @@ It is recommended to omit the optional values and let the tool fallback to the d
 - **IndexDirectoryPath** (*optional*): Container directory of the Lucene index files. Can be absolute or relative to the TargetDirectory. *Default*: 'LuceneIndex' directory in the target web directory's App\_Data folder (which is the same that the web app uses).
 - **EnableOuterSearchEngine**: switches on or off the instant indexing. Our recommendation: always “true” (switched on).
 
+> Please make sure that you keep the SnAdminRuntime configuration **up-to-date with Web.config**! For example if you change the assembly bindings in the *runtime* section in Web.config, you'll have to make the same changes here.
+
 ### Config examples
 Default structure and single server
 ``` xml
