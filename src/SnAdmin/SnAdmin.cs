@@ -177,7 +177,18 @@ namespace SenseNet.Tools.SnAdmin
             Logger.LogWriteLine("Target:  " + targetDirectory);
             Logger.LogWriteLine("Package: " + packagePath);
 
-            packagePath = Unpack(packagePath);
+            try
+            {
+                packagePath = Unpack(packagePath);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWriteLine("ERROR during package unpacking:");
+                Logger.LogException(ex);
+
+                // end the operation here as we could not even unpack the package correctly
+                return -2;
+            }
 
             int result;
             var phase = 0;
