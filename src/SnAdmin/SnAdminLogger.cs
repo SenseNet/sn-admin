@@ -121,8 +121,7 @@ namespace SenseNet.Tools.SnAdmin
                 sb.Append(": ");
                 sb.AppendLine(e.Message);
 
-                var fileNotFoundException = e as FileNotFoundException;
-                if (fileNotFoundException != null)
+                if (e is FileNotFoundException fileNotFoundException)
                 {
                     sb.AppendLine("FUSION LOG:");
                     sb.AppendLine(fileNotFoundException.FusionLog);
@@ -135,18 +134,18 @@ namespace SenseNet.Tools.SnAdmin
 
     internal class SnAdminLogger : ISnAdminLogger
     {
-        private const int LINELENGTH = 80;
+        private const int LineLength = 80;
 
-        protected Dictionary<char, string> _lines;
+        protected Dictionary<char, string> Lines;
 
         public virtual LogLevel AcceptedLevel => LogLevel.File;
 
         public SnAdminLogger()
         {
-            _lines = new Dictionary<char, string>
+            Lines = new Dictionary<char, string>
             {
-                ['='] = new StringBuilder().Append('=', LINELENGTH - 1).ToString(),
-                ['-'] = new StringBuilder().Append('-', LINELENGTH - 1).ToString()
+                ['='] = new StringBuilder().Append('=', LineLength - 1).ToString(),
+                ['-'] = new StringBuilder().Append('-', LineLength - 1).ToString()
             };
         }
 
@@ -158,9 +157,9 @@ namespace SenseNet.Tools.SnAdmin
 
         public void WriteTitle(string title)
         {
-            LogWriteLine(_lines['=']);
+            LogWriteLine(Lines['=']);
             LogWriteLine(Center(title));
-            LogWriteLine(_lines['=']);
+            LogWriteLine(Lines['=']);
         }
         public void Write(string message)
         {
@@ -173,10 +172,10 @@ namespace SenseNet.Tools.SnAdmin
 
         private string Center(string text)
         {
-            if (text.Length >= LINELENGTH - 1)
+            if (text.Length >= LineLength - 1)
                 return text;
             var sb = new StringBuilder();
-            sb.Append(' ', (LINELENGTH - text.Length) / 2).Append(text);
+            sb.Append(' ', (LineLength - text.Length) / 2).Append(text);
             return sb.ToString();
         }
 
@@ -205,7 +204,7 @@ namespace SenseNet.Tools.SnAdmin
             }
         }
 
-        protected bool _lineStart;
+        protected bool LineStart;
 
         public virtual void LogWrite(params object[] values)
         {
@@ -213,7 +212,7 @@ namespace SenseNet.Tools.SnAdmin
             {
                 WriteToLog(writer, values, false);
             }
-            _lineStart = false;
+            LineStart = false;
         }
         public virtual void LogWriteLine(params object[] values)
         {
@@ -221,15 +220,13 @@ namespace SenseNet.Tools.SnAdmin
             {
                 WriteToLog(writer, values, true);
             }
-            _lineStart = true;
+            LineStart = true;
         }
         private void CreateLog(string logfilePath)
         {
-            _lineStart = true;
-            if (logfilePath != null)
-                LogFilePath = logfilePath;
-            else
-                LogFilePath = Path.Combine(LogFolder, Logger.PackageName + DateTime.UtcNow.ToString("_yyyyMMdd-HHmmss") + ".log");
+            LineStart = true;
+            LogFilePath = logfilePath ??
+                Path.Combine(LogFolder, Logger.PackageName + DateTime.UtcNow.ToString("_yyyyMMdd-HHmmss") + ".log");
 
             if (!File.Exists(LogFilePath))
             {
@@ -248,7 +245,7 @@ namespace SenseNet.Tools.SnAdmin
         }
         private void WriteToLog(TextWriter writer, object[] values, bool newLine)
         {
-            if (_lineStart)
+            if (LineStart)
             {
                 writer.Write(DateTime.UtcNow.ToString("HH:mm:ss.ffff"));
                 writer.Write("\t");
@@ -265,7 +262,7 @@ namespace SenseNet.Tools.SnAdmin
     }
     internal class SnAdminConsoleLogger : SnAdminLogger
     {
-        public override LogLevel AcceptedLevel { get { return LogLevel.Console; } }
+        public override LogLevel AcceptedLevel => LogLevel.Console;
 
         public override void Initialize(LogLevel level, string logFilePath) { }
 

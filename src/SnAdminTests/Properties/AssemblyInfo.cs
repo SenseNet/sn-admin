@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 #if DEBUG
@@ -15,9 +14,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("sensenet ECM")]
 [assembly: AssemblyTrademark("Sense/Net Inc.")]
 [assembly: AssemblyCulture("")]
-[assembly: AssemblyVersion("1.4.3.0")]
-[assembly: AssemblyFileVersion("1.4.3.0")]
-[assembly: AssemblyInformationalVersion("1.4.3.0")]
+[assembly: AssemblyVersion("1.4.4.0")]
+[assembly: AssemblyFileVersion("1.4.4.0")]
+[assembly: AssemblyInformationalVersion("1.4.4.0")]
 
 [assembly: ComVisible(false)]
 [assembly: Guid("670973c0-ce4a-407e-9953-cfa53d9ee099")]

@@ -9,7 +9,7 @@ namespace SenseNet.Tools.SnAdmin
         int ExecuteProcess(string workerExePath, string processArgs);
     }
 
-    internal abstract class ProcessActivator
+    internal static class ProcessActivator
     {
         internal static IProcessActivator Instance { get; set; } = new SnAdminRuntimeActivator();
 

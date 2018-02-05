@@ -11,6 +11,7 @@ namespace SenseNet.Tools.SnAdmin.Tests
         [TestInitialize]
         public void InitializeTest()
         {
+            // ReSharper disable once RedundantBaseQualifier
             base.Initialize();
         }
 

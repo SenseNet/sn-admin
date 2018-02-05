@@ -60,6 +60,7 @@
     <Compile Include="TestBase.cs" />
     <Compile Include="TestDisk.cs" />
     <Compile Include="ExecutionTests.cs" />
+    <Compile Include="TestUnpacker.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SnAdmin\SnAdmin.csproj">

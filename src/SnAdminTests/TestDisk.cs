@@ -59,7 +59,12 @@ namespace SenseNet.Tools.SnAdmin.Tests
 
             var files = Files.Where(p => p.StartsWith(path + "\\", StringComparison.InvariantCultureIgnoreCase));
             Files = Files.Except(files).ToList();
+
+            var manifestKeys = Manifests.Keys.Where(p => p.StartsWith(path + "\\", StringComparison.InvariantCultureIgnoreCase)).ToArray();
+            foreach (var key in manifestKeys)
+                Manifests.Remove(key);
         }
+
         public string SearchTargetDirectory()
         {
             // default location: ..\webfolder\Admin\bin

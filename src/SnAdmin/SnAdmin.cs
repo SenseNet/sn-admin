@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -13,30 +12,30 @@ namespace SenseNet.Tools.SnAdmin
     internal class SnAdmin
     {
         #region Constants
-        private const string RUNTIMEEXENAME = "SnAdminRuntime.exe";
-        private const string SANDBOXDIRECTORYNAME = "run";
-        private const string TOOLSDIRECTORYNAME = "Tools";
-        private const string RUNTIMESECTIONXPATH = "/configuration/runtime";
-        private static string ToolTitle = "Sense/Net Admin ";
+        private const string RuntimeExeName = "SnAdminRuntime.exe";
+        private const string SandboxDirectoryName = "run";
+        private const string ToolsDirectoryName = "Tools";
+        private const string RuntimeSectionXPath = "/configuration/runtime";
+        private static string _toolTitle = "Sense/Net Admin ";
         private const string ToolName = "SnAdmin";
 
         private const string PackagePreconditionExceptionTypeName = "PackagePreconditionException";
         private const string InvalidPackageExceptionTypeName = "InvalidPackageException";
 
-        private static readonly string CR = Environment.NewLine;
+        private static readonly string Cr = Environment.NewLine;
         private static readonly string UsageScreen = string.Concat(
             //         1         2         3         4         5         6         7         8
             //12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
-            CR,
-            "Usage:", CR,
-            ToolName, " <package> [<target>]", CR,
-            CR,
-            "Parameters:", CR,
-            "  <package>: File contains a package (*.zip or directory).", CR,
-            "  <target>: Directory contains web folder of a stopped SenseNet instance.", CR,
-            CR,
-            "Help about an existing package:", CR,
-            ToolName, " <package> -help", CR
+            Cr,
+            "Usage:", Cr,
+            ToolName, " <package> [<target>]", Cr,
+            Cr,
+            "Parameters:", Cr,
+            "  <package>: File contains a package (*.zip or directory).", Cr,
+            "  <target>: Directory contains web folder of a stopped SenseNet instance.", Cr,
+            Cr,
+            "Help about an existing package:", Cr,
+            ToolName, " <package> -help", Cr
         );
         #endregion
 
@@ -44,7 +43,7 @@ namespace SenseNet.Tools.SnAdmin
 
         internal static int Main(string[] args)
         {
-            ToolTitle += Assembly.GetExecutingAssembly().GetName().Version;
+            _toolTitle += Assembly.GetExecutingAssembly().GetName().Version;
             if (args.FirstOrDefault(a => a.ToUpper() == "-WAIT") != null)
             {
                 Output.WriteLine("Running in wait mode - now you can attach to the process with a debugger.");
@@ -153,6 +152,7 @@ namespace SenseNet.Tools.SnAdmin
             }
 
             return true;
+
         }
         private static string InsertToolsFolderName(string packagePath)
         {
@@ -162,7 +162,7 @@ namespace SenseNet.Tools.SnAdmin
 
         private static void PrintParameterError(string message)
         {
-            Output.WriteLine(ToolTitle);
+            Output.WriteLine(_toolTitle);
             Output.WriteLine(message);
             Output.WriteLine(UsageScreen);
             Output.WriteLine("Aborted.");
@@ -172,20 +172,31 @@ namespace SenseNet.Tools.SnAdmin
         {
             Output.WriteLine();
 
-            Logger.LogTitle(ToolTitle);
+            Logger.LogTitle(_toolTitle);
             Logger.LogWriteLine("Start at {0}", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
             Logger.LogWriteLine("Target:  " + targetDirectory);
             Logger.LogWriteLine("Package: " + packagePath);
 
-            packagePath = Unpack(packagePath);
+            try
+            {
+                packagePath = Unpack(packagePath);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWriteLine("ERROR during package unpacking:");
+                Logger.LogException(ex);
+
+                // end the operation here as we could not even unpack the package correctly
+                return -2;
+            }
 
             int result;
             var phase = 0;
             var errors = 0;
-            string workerExe;
 
             while (true)
             {
+                string workerExe;
                 try
                 {
                     Logger.LogWriteLine("Creating environment");
@@ -373,7 +384,7 @@ namespace SenseNet.Tools.SnAdmin
                 Disk.FileCopy(filePath, Path.Combine(sandboxPath, Path.GetFileName(filePath)));
 
             // #2 copy missing files from Tools directory
-            var toolsDir = Path.Combine(targetDirectory, TOOLSDIRECTORYNAME);
+            var toolsDir = Path.Combine(targetDirectory, ToolsDirectoryName);
             var toolPaths = GetRelevantFiles(toolsDir);
             var missingNames = toolPaths.Select(Path.GetFileName)
                 .Except(paths.Select(Path.GetFileName)).OrderBy(r => r)
@@ -383,7 +394,7 @@ namespace SenseNet.Tools.SnAdmin
                 Disk.FileCopy(Path.Combine(toolsDir, fileName), Path.Combine(sandboxPath, fileName));
 
             // #3 return with path of the worker exe
-            return Path.Combine(sandboxPath, RUNTIMEEXENAME);
+            return Path.Combine(sandboxPath, RuntimeExeName);
         }
 
         private static string[] GetRelevantFiles(string dir)
@@ -392,7 +403,7 @@ namespace SenseNet.Tools.SnAdmin
         }
         private static string EnsureEmptySandbox(string packagesDirectory)
         {
-            var sandboxFolder = Path.Combine(packagesDirectory, SANDBOXDIRECTORYNAME);
+            var sandboxFolder = Path.Combine(packagesDirectory, SandboxDirectoryName);
             if (!Disk.DirectoryExists(sandboxFolder))
                 Disk.CreateDirectory(sandboxFolder);
             else
@@ -405,7 +416,7 @@ namespace SenseNet.Tools.SnAdmin
             // Perform one-time initialization tasks in the target environment.
             // - copy the runtime section from web.config to the Tools\SnAdminRuntime.exe.config
 
-            var runtimeConfigPath = Path.Combine(targetDirectory, TOOLSDIRECTORYNAME, RUNTIMEEXENAME + ".config");
+            var runtimeConfigPath = Path.Combine(targetDirectory, ToolsDirectoryName, RuntimeExeName + ".config");
             var webConfigPath = Path.Combine(targetDirectory, "Web.config");
 
             if (!Disk.FileExists(webConfigPath) || !Disk.FileExists(runtimeConfigPath))
@@ -417,7 +428,7 @@ namespace SenseNet.Tools.SnAdmin
                 var webConfig = new XmlDocument();
                 webConfig.Load(webConfigPath);
 
-                var runtimeNodeSource = webConfig.SelectSingleNode(RUNTIMESECTIONXPATH);
+                var runtimeNodeSource = webConfig.SelectSingleNode(RuntimeSectionXPath);
                 if (runtimeNodeSource == null)
                     return;
 
@@ -425,7 +436,7 @@ namespace SenseNet.Tools.SnAdmin
                 var runtimeConfig = new XmlDocument();
                 runtimeConfig.Load(runtimeConfigPath);
                 
-                var runtimeNodeTarget = runtimeConfig.SelectSingleNode(RUNTIMESECTIONXPATH);
+                var runtimeNodeTarget = runtimeConfig.SelectSingleNode(RuntimeSectionXPath);
                 if (runtimeNodeTarget != null)
                 {
                     // If the target node already contains bindings or other meaningful info 
@@ -456,18 +467,23 @@ namespace SenseNet.Tools.SnAdmin
 
         private static string Unpack(string package)
         {
-            if (Disk.DirectoryExists(package))
-                return package;
-
             var pkgFolder = Path.GetDirectoryName(package);
             var zipTarget = Path.Combine(pkgFolder, Path.GetFileNameWithoutExtension(package));
+            var packageZipPath = package.EndsWith(".zip", StringComparison.InvariantCultureIgnoreCase)
+                ? package
+                : package + ".zip";
+            var isZipExist = Disk.FileExists(packageZipPath);
 
             Logger.LogWriteLine("Package directory: " + zipTarget);
 
+
             if (Disk.DirectoryExists(zipTarget))
             {
-                Disk.DeleteAllFrom(zipTarget);
-                Logger.LogWriteLine("Old files and directories are deleted.");
+                if (isZipExist)
+                {
+                    Disk.DeleteAllFrom(zipTarget);
+                    Logger.LogWriteLine("Old files and directories are deleted.");
+                }
             }
             else
             {
@@ -475,11 +491,12 @@ namespace SenseNet.Tools.SnAdmin
                 Logger.LogWriteLine("Package directory created.");
             }
 
-            Logger.LogWriteLine("Extracting ...");
-
-            ZipFile.ExtractToDirectory(package, zipTarget);
-
-            Logger.LogWriteLine("Ok.");
+            if (isZipExist)
+            {
+                Logger.LogWriteLine("Extracting ...");
+                Unpacker.Unpack(packageZipPath, zipTarget);
+                Logger.LogWriteLine("Ok.");
+            }
 
             return zipTarget;
         }
@@ -487,7 +504,7 @@ namespace SenseNet.Tools.SnAdmin
         private static readonly string[] DisabledPackageNames = { "App_Data", "bin", "log", "run", "tools" };
         private static void ListPackages()
         {
-            Output.WriteLine(ToolTitle);
+            Output.WriteLine(_toolTitle);
 
             Output.WriteLine("Upgrade and package executor tool for Sense/Net ECM.");
 
@@ -626,7 +643,7 @@ namespace SenseNet.Tools.SnAdmin
 
                     lastException = e;
                     retryCount--;
-                    System.Threading.Thread.Sleep(waitMilliseconds);
+                    Thread.Sleep(waitMilliseconds);
                 }
             }
 
