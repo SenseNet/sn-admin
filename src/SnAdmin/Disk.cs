@@ -20,7 +20,7 @@ namespace SenseNet.Tools.SnAdmin
         XmlDocument LoadManifest(string manifestPath);
     }
 
-    internal abstract class Disk
+    internal static class Disk
     {
         internal static IDisk Instance { get; set; } = new PhysicalDisk();
 
@@ -106,6 +106,7 @@ namespace SenseNet.Tools.SnAdmin
             foreach (DirectoryInfo dir in dirInfo.GetDirectories())
                 dir.Delete(true);
         }
+
         public string SearchTargetDirectory()
         {
             var targetDir = ConfigurationManager.AppSettings["TargetDirectory"];
