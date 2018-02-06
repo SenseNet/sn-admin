@@ -20,7 +20,8 @@ The following list contains what a package can do.
 
 ### Executing a package
 In a nutshell, executing a package is simply invoking the SnAdmin command line tool with the package name.
-```txt
+
+```vim
 SnAdmin.exe packagename [parameters]
 ```
 To learn more about package execution, jump to the [package execution details](#PackageExecution) section below.
@@ -143,6 +144,7 @@ The following sample manifest contains a couple of common steps:
 * deploys some libraries
 * starts the repository
 * imports new content types and items
+
 ```xml
 <Package type='Application' level='Patch'>
   <Id>MyComponent</Id>
@@ -168,6 +170,7 @@ A step xml element in the manifest file appoints the code that will be executed 
 
 #### Step name
 The name of a step element in the XML is the **step class name**. Developers may override the default name in source code. SnAdmin allows you to use the fully qualified name of the underlying step class. In case of name duplication, you can use the fully qualified name instead of the short name of the step. For example the following two steps are equivalent:
+
 ``` xml
 <Delete>App_Data\readme.txt</Delete>
 <SenseNet.Packaging.Steps.Delete>App_Data\readme.txt</SenseNet.Packaging.Steps.Delete>
@@ -178,15 +181,18 @@ The short and full names of the built-in steps can be found in the *Built-in ste
 The step XML element may have some properties. To increase readability of the manifest XML the properties can appear either as **XML attributes** or **sub-elements** of the step element. And if the developer defines a 'default property', then the value can appear as the **inner text** of the step element also. Attribute or element names and the mapped property names are equal. So there are three ways to define a step property. In the following example we define a custom step that's name is *Compare* and has two properties: *SourceFile* (default property) and *TargetFile*:
 
 The **attribute** model:
-``` XML
+
+```xml
 <Compare sourceFile="files\readme.txt" targetFile="bin\readme.txt" />
 ```
 The **default-property** model (default property is explicitly defined by the developer):
-``` XML
+
+```xml
 <Compare targetFile="bin\readme.txt">files\readme.txt</Compare>
 ```
 The **element** model:
-``` XML
+
+```xml
 <Compare>
     <SourceFile>files\readme.txt</SourceFile>
     <TargetFile>bin\readme.txt</TargetFile>
@@ -195,14 +201,16 @@ The **element** model:
 The step definitions above are equivalent. There are two prohibited mixed models:
 
 Attribute and element **name collision** in the mixed model **causes an exception**:
-``` XML
+
+```xml
 <Compare sourceFile="files\readme.txt">
     <SourceFile>files\readme.txt</SourceFile>
     <TargetFile>bin\readme.txt</TargetFile>
 </Compare>
 ```
 Using **sub-elements and default property** in one model **causes an exception**:
-``` XML
+
+```xml
 <Compare>
     files\readme.txt
     <TargetFile>bin\readme.txt</TargetFile>
@@ -221,7 +229,8 @@ A step that understands any of the above usually exposes a property where you ca
 
 ### Conditional steps
 It is possible to execute steps based on a condition. This means a step (or a list of steps) is executed only if a given condition is fulfilled. For example a config file is modified only if the file actually exists. Or you can check if a certain content exists in the Content Repository.
-``` xml
+
+```xml
 <IfFileExists Path="custom.config">
    <Then>
       <Step1 />
@@ -249,7 +258,8 @@ It is possible to define multiple lists of steps inside a package (in the manife
 SnAdmin tool **will restart itself** between phases and will be executed with the new dll set. The execution will continue with the step where it left off.
 
 Phase example
-``` xml
+
+```xml
 <Steps>
     <Phase>
         <Export />
@@ -283,7 +293,8 @@ In this section we describe the recommended directory structure of the SnAdmin t
 The SnAdmin feature resides *inside* the web folder in a subfolder called *Admin*.
 
 We created the default Web folder structure to make automatic updates easier. It is advisable to keep the default structure intact to avoid manual updates later.
-``` text
+
+```vim
 <Drive>:\
     ....
     <WebSite>
@@ -326,7 +337,8 @@ It is recommended to omit the optional values and let the tool fallback to the d
 
 ### Config examples
 Default structure and single server
-``` xml
+
+```xml
 <!--<add key="NetworkTargets" value="\\Server1\SensenetWeb;\\Server2\SensenetWeb" />-->
 <!--<add key="ClusterChannelProvider" value="SenseNet.Communication.Messaging.MsmqChannelProvider, SenseNet.Storage" />-->
 <!--<add key="MsmqChannelQueueName" value=".\private$\server1;.\private$\server2" />-->
@@ -334,7 +346,8 @@ Default structure and single server
 <add key="EnableOuterSearchEngine" value="true" />
 ```
 Default structure and NLBS
-``` xml
+
+```xml
 <add key="NetworkTargets" value="\\Server1\SensenetWeb;\\Server2\SensenetWeb" />
 <add key="ClusterChannelProvider" value="SenseNet.Communication.Messaging.MsmqChannelProvider, SenseNet.Storage" />
 <add key="MsmqChannelQueueName" value=".\private$\server1;.\private$\server2" />
@@ -344,7 +357,8 @@ Default structure and NLBS
 
 ## Arguments
 When you start the SnAdmin tool, there are a couple of arguments you can use to customize its behavior.
-``` text
+
+```vim
 SnAdmin[.exe] <package> [<target>] [LOGLEVEL:<loglevel>] [-HELP|-?] [-SCHEMA] [FORCEDREINSTALL:true] [-WAIT]
 ```
 - **&lt;package>**: Zip package file or directory. Can be a name, relative or absolute path of the package to execute.
@@ -361,7 +375,8 @@ SnAdmin[.exe] <package> [<target>] [LOGLEVEL:<loglevel>] [-HELP|-?] [-SCHEMA] [F
 
 ### Execution examples
 #### Example 1
-``` text
+
+```vim
 Web\Admin\bin\SnAdmin package1
 ```
 - If 'package1' directory exists, the **extraction is skipped**.
@@ -369,7 +384,8 @@ Web\Admin\bin\SnAdmin package1
 - If 'package1.zip' does not exist, the tool will be terminated with a 'Given package file does not exist' error message.
 
 #### Example 2
-``` text
+
+```vim
 Web\Admin\bin\SnAdmin package1.zip
 ```
 - If 'package1.zip' file does not exist, the tool will be terminated with a 'Given package file does not exist' message.
@@ -388,7 +404,8 @@ After execution the log file will contain essential information about the execut
 
 ## Getting package information
 After executing a package and starting the site you can check the packages with a [OData function] that exposes information about the installed components and libraries:
-``` text
+
+```vim
 http://example.com/OData.svc('root')/GetVersionInfo
 ```
 This function returns a JSON object that contains all packaging information: installed sensenet ECM version, installed components, loaded assemblies, and all executed packages.
@@ -410,7 +427,7 @@ A variable is identified by its name, that always starts with an **@** sign. You
 
 An example for renaming a file based on a condition, using a variable:
 
-```xml
+```vim
 <IfCondition Condition="@conditionValue">
    <Then>
       <Assign Name="@newName">FileName1</Assign>
@@ -440,7 +457,7 @@ Some packages expose parameters that can be provided during execution. Parameter
 
 When you execture the package, you can provide a new value for a parameter as a command line argument:
 
-```txt
+```vim
 SnAdmin package1 datasource:MYMACHINE\ServerName initialcatalog:sensenet7
 ```
 
@@ -448,7 +465,7 @@ SnAdmin package1 datasource:MYMACHINE\ServerName initialcatalog:sensenet7
 
 To see the available parameters of a package, just invoke the package with the -HELP argument and you will see the parameter list with descriptions.
 
-```txt
+```vim
 SnAdmin packagename -help
 ```
 
