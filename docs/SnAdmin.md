@@ -6,6 +6,46 @@
 
 SnAdmin also offers a growing number of [built-in tools](https://github.com/SenseNet/sensenet/blob/master/docs/snadmin-tools.md) that will let you perform common operations like importing content items. 
 
+- [SnAdmin](#snadmin)
+        - [What is a package?](#what-is-a-package)
+        - [Executing a package](#executing-a-package)
+    - [SnAdmin and sensenet ECM instance](#snadmin-and-sensenet-ecm-instance)
+            - [Advanced: importing without stopping web applications](#advanced-importing-without-stopping-web-applications)
+    - [The package](#the-package)
+        - [One package - one component](#one-package---one-component)
+        - [Package type](#package-type)
+        - [Versioning](#versioning)
+        - [Package contents](#package-contents)
+        - [The manifest](#the-manifest)
+            - [Metadata](#metadata)
+        - [Example](#example)
+        - [Steps](#steps)
+            - [Step name](#step-name)
+            - [Step properties](#step-properties)
+            - [File paths in steps](#file-paths-in-steps)
+        - [Conditional steps](#conditional-steps)
+        - [Built-in steps](#built-in-steps)
+        - [Custom Steps](#custom-steps)
+        - [Phases](#phases)
+        - [Custom step assemblies per phase](#custom-step-assemblies-per-phase)
+        - [Custom assemblies and import content](#custom-assemblies-and-import-content)
+        - [Directory structure in the package](#directory-structure-in-the-package)
+    - [Executing a package](#executing-a-package)
+        - [SnAdmin directory structure](#snadmin-directory-structure)
+        - [SnAdmin subfolders](#snadmin-subfolders)
+    - [Configuration](#configuration)
+        - [Config examples](#config-examples)
+    - [Arguments](#arguments)
+        - [Execution examples](#execution-examples)
+            - [Example 1](#example-1)
+            - [Example 2](#example-2)
+    - [Logging](#logging)
+    - [Getting package information](#getting-package-information)
+        - [Package execution result](#package-execution-result)
+    - [Package variables](#package-variables)
+    - [Package parameters](#package-parameters)
+    - [Updating Task executors](#updating-task-executors)
+
 ### What is a package?
 The SnAdmin tool is a console application that executes a **package**. A package is a **zip file** that encapsulates *operations* and *data*. Portal builders and developers create these packages containing all the content and executables for a feature or a bugfix. A package should be executed on a dev machine or a test server first, minimizing the chance of installation errors in a production environment.
 
@@ -273,8 +313,38 @@ Phase example
 ```
 Each phase is independent during the SnAdmin execution. It means every phase is parsed and executed independently. This way it is possible to install or upgrade a class library with new step types and use these in a following phase in the same package. This execution model has only one disadvantage: if the manifest xml contains invalid parts in a later phase, an exception will be thrown only in the incorrect phase after the successful execution of the previous phases. In this case the package may leave unwanted elements in the database or the file system. To minimize the chance of these cases you always need to test the package on a test server before executing it on a production server.
 
+### Custom step assemblies per phase
+It is possible to add custom libraries that are **loaded only for a particular phase**. This may be useful when you have no other way to add custom behavior before or after other steps (for example you have to perform an operation with the *old dll set* but using a *new custom step*).
+
+You define a folder containing custom assemblies as an attribute on the phase.
+
+```xml
+<Steps>
+    <Phase extensions="customsteps">
+        <MyCustomStep />
+    </Phase>
+</Steps>
+```
+
+The tool will load all assemblies from the *customsteps* folder inside the package before it starts to execute the phase.
+
+### Custom assemblies and import content
+In those rare cases when there is an **API change** in sensenet ECM that breaks your own libraries we need a way for you to inject the **updated version** of those libraries into the package. The reason behind this is that in some cases we need to perform operations at the end of the package *with the new dll set* - and if an custom library is there that targets the *old API*, the system would not start. 
+
+In these cases you will need to compile your library with the new sensenet API and **put it inside the package zip file**, into the following folder:
+
+`Customization\bin`
+
+This is a naming convention, it won't work with different folder names. All assemblies put into this subfolder in the package will be copied to the target web\bin folder at the appropriate time during patch execution.
+
+There is a similar subfolder for **new content items to import**. The contents of the following subfolder will be imported to the Content Repository right below the /Root:
+
+`Customization\import`
+
+> With these additions you can **modify package behavior without having to modify the manifest** and the package will still be a compact, single zip file.
+
 ### Directory structure in the package
-The package zip file should contain only one XML file in the root (the manifest), all additional content should be in subfolders. There is no naming convention for the subfolders - except [the one for developers](https://github.com/SenseNet/sensenet/blob/master/docs/snadmin-create-custom-step.md).
+The package zip file should contain only one XML file in the root (the manifest), all additional content should be in subfolders. There is no naming convention for the subfolders - except the ones above and [the one for developers](https://community.sensenet.com/docs/tutorials/snadmin-create-custom-step).
 
 You can name your folders as you wish, but it is recommended to follow these rules:
 - provide content files to import in a separate folder (e.g. called *import*)
