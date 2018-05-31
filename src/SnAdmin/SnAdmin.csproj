@@ -92,7 +92,9 @@
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="SnAdmin.nuspec" />
+    <None Include="SnAdmin.nuspec">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0,Profile=Client">
