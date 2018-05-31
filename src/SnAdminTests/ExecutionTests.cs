@@ -172,5 +172,54 @@ namespace SenseNet.Tools.SnAdmin.Tests
             Assert.IsTrue(activator.Args[0].Contains("Package1"));
             Assert.IsTrue(activator.Args[0].Contains("PHASE:0"));
         }
+
+        [TestMethod]
+        public void Execution_DotInDirectoryName()
+        {
+            // ARRANGE
+            var xml = new XmlDocument();
+            //manifests.Add(@"Q:\WebApp1\Admin\Package1\manifest.xml", xml);
+            xml.LoadXml(@"<Package type='Product' level='Tool'>
+  <Name>sensenet</Name>
+  <ReleaseDate>2018-05-31</ReleaseDate>
+  <Description>|package description|</Description>
+  <Steps>
+    <Trace>Original message</Trace>
+  </Steps>
+</Package>");
+
+            var directories = DefaultDirs.ToList();
+            directories.Add(@"Q:\WebApp1\Admin\Package1.v2.0");
+            var manifests = DefaultManifests.ToDictionary(x => x.Key, x => x.Value);
+            manifests.Add(@"Q:\WebApp1\Admin\Package1.v2.0\manifest.xml", xml);
+
+            var disk = new TestDisk(directories, DefaultFiles, manifests);
+            Disk.Instance = disk;
+            var activator = new TestActivator(1);
+            ProcessActivator.Instance = activator;
+            var unpacker = new TestUnpacker();
+            Unpacker.Instance = unpacker;
+            var args = new[] { "Package1.v2.0", "LOGLEVEL:Console" };
+            var console = new StringWriter();
+            SnAdmin.Output = console;
+
+            // ACT
+            var result = SnAdmin.Main(args);
+
+            // ASSERT
+            var consoleText = console.GetStringBuilder().ToString();
+            Assert.AreEqual(0, result);
+
+            Assert.IsTrue(disk.Manifests.ContainsKey(@"Q:\WebApp1\Admin\Package1.v2.0\manifest.xml"));
+            Assert.IsTrue(consoleText.Contains(@"Package: Q:\WebApp1\Admin\Package1.v2.0"));
+            Assert.IsTrue(consoleText.Contains(@"Package directory: Q:\WebApp1\Admin\Package1.v2.0"));
+            Assert.IsFalse(consoleText.Contains("Package directory created."));
+            Assert.IsFalse(consoleText.Contains("Extracting ..."));
+
+            Assert.AreEqual(1, activator.ExePaths.Count);
+            Assert.AreEqual(1, activator.Args.Count);
+            Assert.IsTrue(activator.Args[0].Contains("Package1"));
+            Assert.IsTrue(activator.Args[0].Contains("PHASE:0"));
+        }
     }
 }

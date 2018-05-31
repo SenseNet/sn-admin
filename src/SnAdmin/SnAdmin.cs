@@ -474,6 +474,12 @@ namespace SenseNet.Tools.SnAdmin
                 : package + ".zip";
             var isZipExist = Disk.FileExists(packageZipPath);
 
+            if (Disk.DirectoryExists(package) && !isZipExist)
+            {
+                Logger.LogWriteLine("Package directory: " + package);
+                return package;
+            }
+
             Logger.LogWriteLine("Package directory: " + zipTarget);
 
 
