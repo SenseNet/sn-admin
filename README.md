@@ -1,3 +1,13 @@
+# Legacy feature alert
+
+Please note that this is a legacy feature which is no longer supported on the latest (and greatest) sensenet version.
+
+# sensenet as a service (SNaaS) - use sensenet from the cloud
+
+For a monthly subscription fee, we store all your content and data, relieving you of all maintenance-related tasks and installation, ensuring easy onboarding, easy updates, and patches.
+
+https://www.sensenet.com/pricing
+
 # sensenet SnAdmin
 
 Upgrade and package executor tool for [sensenet](https://github.com/SenseNet/sensenet). It can be used to execute packages (e.g. upgrade packages published for *Enterprise* customers, or custom packages assembled by anyone) that change the Content Repository or the web application folder. It also helps developers and operators automate their processes (e.g. a build or deployment workflow).
@@ -22,9 +32,3 @@ Get package description and parameter list:
 For details, examples and extensibility options please visit the following article:
 
 - [SnAdmin details](/docs/SnAdmin.md)
-
-# sensenet as a service (SNaaS) - use sensenet from the cloud
-
-For a monthly subscription fee, we store all your content and data, relieving you of all maintenance-related tasks and installation, ensuring easy onboarding, easy updates, and patches.
-
-https://www.sensenet.com/pricing
